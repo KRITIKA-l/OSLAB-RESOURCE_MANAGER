@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart OS Resource Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-1: #071226;
+      --bg-2: #122749;
+      --bg-3: #173862;
+      --panel: rgba(9, 19, 36, 0.78);
+      --panel-strong: rgba(7, 14, 28, 0.92);
+      --line: rgba(148, 184, 255, 0.26);
+      --text: #e8f2ff;
+      --muted: #9db4d5;
+      --brand: #80e4ff;
+      --brand-strong: #2fc4ef;
+      --good: #7dffb0;
+      --bad: #ffb07d;
+      --warn: #ffe08a;
+      --shadow: 0 14px 40px rgba(0, 0, 0, 0.34);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 700px at 10% 10%, #1f5d93 0%, transparent 65%),
+        radial-gradient(1100px 700px at 90% -5%, #0a3a5d 0%, transparent 60%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2) 48%, var(--bg-3));
+      background-attachment: fixed;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(180, 220, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(180, 220, 255, 0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: radial-gradient(circle at center, black 45%, transparent 92%);
+      z-index: 0;
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      width: min(1200px, 92vw);
+      margin: 34px auto;
+      display: grid;
+      gap: 20px;
+      animation: rise 0.8s ease;
+    }
+
+    @keyframes rise {
+      from { transform: translateY(16px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .hero {
+      background: linear-gradient(130deg, rgba(128, 228, 255, 0.18), rgba(34, 96, 166, 0.35));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(6px);
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(1.4rem, 2vw + 1rem, 2.3rem);
+      letter-spacing: 0.03em;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .tab-btn {
+      border: 1px solid var(--line);
+      background: rgba(12, 24, 46, 0.68);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: 0.22s ease;
+    }
+
+    .tab-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(128, 228, 255, 0.7);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(120deg, #7be9ff 0%, #2db9e5 100%);
+      color: #071226;
+      border-color: transparent;
+      font-weight: 700;
+      box-shadow: 0 6px 16px rgba(65, 210, 247, 0.35);
+    }
+
+    .panel {
+      display: none;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      backdrop-filter: blur(8px);
+    }
+
+    .panel.active {
+      display: grid;
+      animation: fade 0.35s ease;
+    }
+
+    @keyframes fade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    label {
+      font-size: 0.86rem;
+      color: var(--muted);
+      letter-spacing: 0.01em;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 11px;
+      font-family: "IBM Plex Mono", Consolas, monospace;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(129, 228, 255, 0.12);
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+      line-height: 1.35;
+    }
+
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+    .span-7 { grid-column: span 7; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .btn.primary {
+      background: linear-gradient(120deg, #9befff, #4bd2fb);
+      color: #06203a;
+    }
+
+    .btn.ghost {
+      background: rgba(8, 17, 33, 0.8);
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .result {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(2, 8, 20, 0.86);
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .result table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: "IBM Plex Mono", Consolas, monospace;
+      font-size: 0.84rem;
+    }
+
+    .result th,
+    .result td {
+      border-bottom: 1px solid rgba(142, 178, 228, 0.2);
+      padding: 8px 9px;
+      text-align: left;
+    }
+
+    .result th {
+      color: #bce6ff;
+      font-size: 0.8rem;
+      letter-spacing: 0.02em;
+    }
+
+    .metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .metric {
+      border: 1px solid rgba(139, 195, 255, 0.3);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-family: "IBM Plex Mono", Consolas, monospace;
+      font-size: 0.86rem;
+      background: rgba(18, 35, 62, 0.55);
+    }
+
+    .gantt {
+      margin-top: 12px;
+      border-top: 1px solid rgba(142, 178, 228, 0.25);
+      padding-top: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .gantt-line {
+      display: flex;
+      align-items: stretch;
+      min-height: 42px;
+      overflow: hidden;
+      border-radius: 9px;
+      border: 1px solid rgba(142, 178, 228, 0.25);
+    }
+
+    .segment {
+      display: grid;
+      place-content: center;
+      font-size: 0.76rem;
+      padding: 0 8px;
+      min-width: 42px;
+      border-right: 1px solid rgba(7, 18, 38, 0.45);
+      color: #06203a;
+      font-weight: 700;
+      background: linear-gradient(140deg, #8ce8ff, #44cbf4);
+    }
+
+    .segment:last-child {
+      border-right: none;
+    }
+
+    .timeline {
+      display: flex;
+      justify-content: space-between;
+      font-family: "IBM Plex Mono", Consolas, monospace;
+      font-size: 0.76rem;
+      color: #c5ddf6;
+      gap: 10px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .status {
+      margin-top: 8px;
+      font-family: "IBM Plex Mono", Consolas, monospace;
+      font-size: 0.9rem;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(142, 178, 228, 0.3);
+      background: rgba(17, 32, 57, 0.72);
+    }
+
+    .status.safe { color: var(--good); }
+    .status.deadlock { color: var(--bad); }
+
+    .error {
+      margin-top: 10px;
+      color: var(--bad);
+      font-size: 0.86rem;
+      font-family: "IBM Plex Mono", Consolas, monospace;
+      white-space: pre-wrap;
+    }
+
+    .mono {
+      font-family: "IBM Plex Mono", Consolas, monospace;
+    }
+
+    @media (max-width: 920px) {
+      .span-2, .span-3, .span-4, .span-5, .span-6, .span-7, .span-8 {
+        grid-column: span 12;
+      }
+
+      .shell {
+        margin: 18px auto;
+        width: min(1220px, 95vw);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <h1 class="title">Smart OS Resource Manager</h1>
+      <p class="subtitle">HTML frontend for scheduling, page replacement, and deadlock avoidance algorithms.</p>
+    </section>
+
+    <nav class="tabs" aria-label="Module Tabs">
+      <button class="tab-btn active" data-tab="cpu">CPU Scheduling</button>
+      <button class="tab-btn" data-tab="memory">Memory Management</button>
+      <button class="tab-btn" data-tab="deadlock">Deadlock Avoidance</button>
+    </nav>
+
+    <section id="cpu" class="panel active">
+      <div class="grid">
+        <div class="field span-4">
+          <label for="cpuAlgorithm">Algorithm</label>
+          <select id="cpuAlgorithm">
+            <option value="FCFS">FCFS</option>
+            <option value="SJF">SJF</option>
+            <option value="SRTF">SRTF</option>
+            <option value="Priority NP">Priority (Non-Preemptive)</option>
+            <option value="Priority P">Priority (Preemptive)</option>
+            <option value="Round Robin">Round Robin</option>
+          </select>
+        </div>
+        <div class="field span-2">
+          <label for="cpuN">Processes (n)</label>
+          <input id="cpuN" type="number" min="1" placeholder="4" />
+        </div>
+        <div class="field span-6">
+          <label for="cpuAT">Arrival Times</label>
+          <input id="cpuAT" type="text" placeholder="0 1 2 3" />
+        </div>
+
+        <div class="field span-6">
+          <label for="cpuBT">Burst Times</label>
+          <input id="cpuBT" type="text" placeholder="5 3 8 6" />
+        </div>
+        <div class="field span-4">
+          <label for="cpuPR">Priority (needed for Priority modes)</label>
+          <input id="cpuPR" type="text" placeholder="2 1 3 4" disabled />
+        </div>
+        <div class="field span-2">
+          <label for="cpuQ">Time Quantum (RR)</label>
+          <input id="cpuQ" type="number" min="1" placeholder="2" disabled />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="runCPU" class="btn primary">Run Scheduling</button>
+        <button id="sampleCPU" class="btn ghost">Load Sample</button>
+      </div>
+      <p class="hint">Use space-separated integers. Output mirrors your Python mini-project computations.</p>
+
+      <div id="cpuError" class="error" aria-live="polite"></div>
+      <div id="cpuResult" class="result"></div>
+    </section>
+
+    <section id="memory" class="panel">
+      <div class="grid">
+        <div class="field span-4">
+          <label for="memAlgorithm">Algorithm</label>
+          <select id="memAlgorithm">
+            <option value="FIFO">FIFO</option>
+            <option value="LRU">LRU</option>
+          </select>
+        </div>
+        <div class="field span-3">
+          <label for="memFrames">Frames</label>
+          <input id="memFrames" type="number" min="1" placeholder="3" />
+        </div>
+        <div class="field span-12">
+          <label for="memPages">Pages</label>
+          <input id="memPages" type="text" placeholder="7 0 1 2 0 3 0 4" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="runMemory" class="btn primary">Run Memory Manager</button>
+        <button id="sampleMemory" class="btn ghost">Load Sample</button>
+      </div>
+
+      <div id="memoryError" class="error" aria-live="polite"></div>
+      <div id="memoryResult" class="result"></div>
+    </section>
+
+    <section id="deadlock" class="panel">
+      <div class="grid">
+        <div class="field span-2">
+          <label for="deadN">Processes (n)</label>
+          <input id="deadN" type="number" min="1" placeholder="5" />
+        </div>
+        <div class="field span-2">
+          <label for="deadM">Resources (m)</label>
+          <input id="deadM" type="number" min="1" placeholder="3" />
+        </div>
+        <div class="field span-8">
+          <label for="deadAvail">Available Vector</label>
+          <input id="deadAvail" type="text" placeholder="3 3 2" />
+        </div>
+
+        <div class="field span-6">
+          <label for="deadAlloc">Allocation Matrix (one process per line)</label>
+          <textarea id="deadAlloc" placeholder="0 1 0&#10;2 0 0&#10;3 0 2"></textarea>
+        </div>
+        <div class="field span-6">
+          <label for="deadMax">Max Matrix (one process per line)</label>
+          <textarea id="deadMax" placeholder="7 5 3&#10;3 2 2&#10;9 0 2"></textarea>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="runDeadlock" class="btn primary">Run Banker's Check</button>
+        <button id="sampleDeadlock" class="btn ghost">Load Sample</button>
+      </div>
+
+      <div id="deadlockError" class="error" aria-live="polite"></div>
+      <div id="deadlockResult" class="result"></div>
+    </section>
+  </main>
+
+  <script>
+    const tabs = document.querySelectorAll(".tab-btn");
+    const panels = document.querySelectorAll(".panel");
+
+    tabs.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        tabs.forEach((b) => b.classList.remove("active"));
+        panels.forEach((p) => p.classList.remove("active"));
+
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    function parseIntList(raw, label, expectedLength = null) {
+      const trimmed = raw.trim();
+      if (!trimmed) throw new Error(label + " is required.");
+      const parts = trimmed.split(/\s+/);
+      const values = parts.map((p) => {
+        const n = Number(p);
+        if (!Number.isInteger(n)) throw new Error(label + " must contain integers only.");
+        return n;
+      });
+      if (expectedLength !== null && values.length !== expectedLength) {
+        throw new Error(label + " must contain exactly " + expectedLength + " values.");
+      }
+      return values;
+    }
+
+    function parseMatrix(raw, rows, cols, label) {
+      const lines = raw
+        .split(/\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      if (lines.length !== rows) {
+        throw new Error(label + " must have exactly " + rows + " rows.");
+      }
+
+      return lines.map((line, idx) => {
+        const row = line.split(/\s+/).map((x) => {
+          const n = Number(x);
+          if (!Number.isInteger(n)) throw new Error(label + " row " + (idx + 1) + " must contain integers.");
+          return n;
+        });
+        if (row.length !== cols) {
+          throw new Error(label + " row " + (idx + 1) + " must have exactly " + cols + " values.");
+        }
+        return row;
+      });
+    }
+
+    function clearError(id) {
+      document.getElementById(id).textContent = "";
+    }
+
+    function showError(id, msg) {
+      document.getElementById(id).textContent = msg;
+    }
+
+    function esc(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    const Scheduler = {
+      fcfs(n, at, bt) {
+        const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => at[a] - at[b]);
+        let time = 0;
+        const wt = Array(n).fill(0);
+        const tat = Array(n).fill(0);
+        const ct = Array(n).fill(0);
+        const gantt = [];
+
+        order.forEach((i) => {
+          if (time < at[i]) time = at[i];
+          const start = time;
+          time += bt[i];
+          ct[i] = time;
+          tat[i] = ct[i] - at[i];
+          wt[i] = tat[i] - bt[i];
+          gantt.push(["P" + (i + 1), start, time]);
+        });
+
+        return { wt, tat, ct, gantt };
+      },
+
+      sjf(n, at, bt) {
+        const completed = Array(n).fill(false);
+        let time = 0;
+        const wt = Array(n).fill(0);
+        const tat = Array(n).fill(0);
+        const ct = Array(n).fill(0);
+        const gantt = [];
+
+        while (completed.some((x) => !x)) {
+          let idx = -1;
+          let minBt = Infinity;
+          for (let i = 0; i < n; i++) {
+            if (at[i] <= time && !completed[i] && bt[i] < minBt) {
+              idx = i;
+              minBt = bt[i];
+            }
+          }
+
+          if (idx === -1) {
+            time += 1;
+            continue;
+          }
+
+          const start = time;
+          time += bt[idx];
+          ct[idx] = time;
+          tat[idx] = ct[idx] - at[idx];
+          wt[idx] = tat[idx] - bt[idx];
+          gantt.push(["P" + (idx + 1), start, time]);
+          completed[idx] = true;
+        }
+
+        return { wt, tat, ct, gantt };
+      },
+
+      srtf(n, at, bt) {
+        const rem = bt.slice();
+        let time = 0;
+        let complete = 0;
+        const wt = Array(n).fill(0);
+        const tat = Array(n).fill(0);
+        const ct = Array(n).fill(0);
+        const gantt = [];
+        let prev = -1;
+
+        while (complete !== n) {
+          let idx = -1;
+          let minRem = Infinity;
+
+          for (let i = 0; i < n; i++) {
+            if (at[i] <= time && rem[i] > 0 && rem[i] < minRem) {
+              idx = i;
+              minRem = rem[i];
+            }
+          }
+
+          if (idx === -1) {
+            time += 1;
+            continue;
+          }
+
+          if (prev !== idx) gantt.push(["P" + (idx + 1), time, null]);
+
+          rem[idx] -= 1;
+          time += 1;
+          gantt[gantt.length - 1][2] = time;
+          prev = idx;
+
+          if (rem[idx] === 0) {
+            complete += 1;
+            ct[idx] = time;
+            tat[idx] = ct[idx] - at[idx];
+            wt[idx] = tat[idx] - bt[idx];
+          }
+        }
+
+        return { wt, tat, ct, gantt };
+      },
+
+      priorityNP(n, at, bt, pr) {
+        const completed = Array(n).fill(false);
+        let time = 0;
+        const wt = Array(n).fill(0);
+        const tat = Array(n).fill(0);
+        const ct = Array(n).fill(0);
+        const gantt = [];
+
+        while (completed.some((x) => !x)) {
+          let idx = -1;
+          let best = -Infinity;
+
+          for (let i = 0; i < n; i++) {
+            const betterPriority = pr[i] > best;
+            const tieAndEarlier = pr[i] === best && idx !== -1 && at[i] < at[idx];
+            if (at[i] <= time && !completed[i] && (betterPriority || tieAndEarlier)) {
+              idx = i;
+              best = pr[i];
+            }
+          }
+
+          if (idx === -1) {
+            time += 1;
+            continue;
+          }
+
+          const start = time;
+          time += bt[idx];
+          ct[idx] = time;
+          tat[idx] = ct[idx] - at[idx];
+          wt[idx] = tat[idx] - bt[idx];
+          gantt.push(["P" + (idx + 1), start, time]);
+          completed[idx] = true;
+        }
+
+        return { wt, tat, ct, gantt };
+      },
+
+      priorityP(n, at, bt, pr) {
+        const rem = bt.slice();
+        let time = 0;
+        let complete = 0;
+        const wt = Array(n).fill(0);
+        const tat = Array(n).fill(0);
+        const ct = Array(n).fill(0);
+        const gantt = [];
+        let prev = -1;
+
+        while (complete !== n) {
+          let idx = -1;
+          let best = -Infinity;
+
+          for (let i = 0; i < n; i++) {
+            const betterPriority = pr[i] > best;
+            const tieAndEarlier = pr[i] === best && idx !== -1 && at[i] < at[idx];
+            if (at[i] <= time && rem[i] > 0 && (betterPriority || tieAndEarlier)) {
+              idx = i;
+              best = pr[i];
+            }
+          }
+
+          if (idx === -1) {
+            time += 1;
+            continue;
+          }
+
+          if (prev !== idx) gantt.push(["P" + (idx + 1), time, null]);
+
+          rem[idx] -= 1;
+          time += 1;
+          gantt[gantt.length - 1][2] = time;
+          prev = idx;
+
+          if (rem[idx] === 0) {
+            complete += 1;
+            ct[idx] = time;
+            tat[idx] = ct[idx] - at[idx];
+            wt[idx] = tat[idx] - bt[idx];
+          }
+        }
+
+        return { wt, tat, ct, gantt };
+      },
+
+      roundRobin(n, at, bt, q) {
+        const rem = bt.slice();
+        let time = 0;
+        const queue = [];
+        const visited = Array(n).fill(false);
+        const wt = Array(n).fill(0);
+        const tat = Array(n).fill(0);
+        const ct = Array(n).fill(0);
+        const gantt = [];
+
+        while (true) {
+          for (let i = 0; i < n; i++) {
+            if (at[i] <= time && !visited[i]) {
+              queue.push(i);
+              visited[i] = true;
+            }
+          }
+
+          if (queue.length === 0) {
+            if (rem.every((x) => x === 0)) break;
+            time += 1;
+            continue;
+          }
+
+          const i = queue.shift();
+          const start = time;
+
+          if (rem[i] > q) {
+            time += q;
+            rem[i] -= q;
+          } else {
+            time += rem[i];
+            rem[i] = 0;
+            ct[i] = time;
+          }
+
+          gantt.push(["P" + (i + 1), start, time]);
+
+          for (let j = 0; j < n; j++) {
+            if (at[j] <= time && !visited[j]) {
+              queue.push(j);
+              visited[j] = true;
+            }
+          }
+
+          if (rem[i] > 0) queue.push(i);
+        }
+
+        for (let i = 0; i < n; i++) {
+          tat[i] = ct[i] - at[i];
+          wt[i] = tat[i] - bt[i];
+        }
+
+        return { wt, tat, ct, gantt };
+      }
+    };
+
+    const MemoryManager = {
+      fifo(pages, frames) {
+        const mem = [];
+        const steps = [];
+        let faults = 0;
+
+        pages.forEach((p) => {
+          const hit = mem.includes(p);
+          if (!hit) {
+            faults += 1;
+            if (mem.length < frames) mem.push(p);
+            else {
+              mem.shift();
+              mem.push(p);
+            }
+          }
+          steps.push({ page: p, hit, memory: mem.slice() });
+        });
+
+        return { faults, steps };
+      },
+
+      lru(pages, frames) {
+        const mem = [];
+        const steps = [];
+        let faults = 0;
+
+        pages.forEach((p) => {
+          const hit = mem.includes(p);
+          if (!hit) {
+            faults += 1;
+            if (mem.length < frames) mem.push(p);
+            else {
+              mem.shift();
+              mem.push(p);
+            }
+          } else {
+            mem.splice(mem.indexOf(p), 1);
+            mem.push(p);
+          }
+          steps.push({ page: p, hit, memory: mem.slice() });
+        });
+
+        return { faults, steps };
+      }
+    };
+
+    function bankers(n, m, alloc, maxm, avail) {
+      const need = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: m }, (_, j) => maxm[i][j] - alloc[i][j])
+      );
+      const finish = Array(n).fill(false);
+      const seq = [];
+      const work = avail.slice();
+
+      while (seq.length < n) {
+        let found = false;
+        for (let i = 0; i < n; i++) {
+          const canRun = !finish[i] && need[i].every((needVal, j) => needVal <= work[j]);
+          if (canRun) {
+            for (let j = 0; j < m; j++) work[j] += alloc[i][j];
+            seq.push(i);
+            finish[i] = true;
+            found = true;
+          }
+        }
+        if (!found) break;
+      }
+
+      return {
+        safe: seq.length === n,
+        sequence: seq.map((i) => "P" + (i + 1)),
+        need,
+        available_end: work
+      };
+    }
+
+    function avg(arr) {
+      return arr.reduce((sum, x) => sum + x, 0) / arr.length;
+    }
+
+    function renderCpuResult({ n, at, bt, pr, wt, tat, ct, gantt, algorithm }) {
+      const header = pr
+        ? "<tr><th>Process</th><th>AT</th><th>BT</th><th>PR</th><th>CT</th><th>TAT</th><th>WT</th></tr>"
+        : "<tr><th>Process</th><th>AT</th><th>BT</th><th>CT</th><th>TAT</th><th>WT</th></tr>";
+
+      const rows = Array.from({ length: n }, (_, i) => {
+        if (pr) {
+          return `<tr><td>P${i + 1}</td><td>${at[i]}</td><td>${bt[i]}</td><td>${pr[i]}</td><td>${ct[i]}</td><td>${tat[i]}</td><td>${wt[i]}</td></tr>`;
+        }
+        return `<tr><td>P${i + 1}</td><td>${at[i]}</td><td>${bt[i]}</td><td>${ct[i]}</td><td>${tat[i]}</td><td>${wt[i]}</td></tr>`;
+      }).join("");
+
+      const totalDuration = Math.max(1, gantt[gantt.length - 1][2] - gantt[0][1]);
+      const bars = gantt.map(([p, start, end]) => {
+        const width = Math.max(7, ((end - start) / totalDuration) * 100);
+        return `<div class="segment" style="width:${width}%">${p}<br>${start}-${end}</div>`;
+      }).join("");
+
+      const times = [gantt[0][1], ...gantt.map((g) => g[2])].map((t) => `<span>${t}</span>`).join("");
+
+      return `
+        <div class="mono" style="margin-bottom:10px; color:#cbe5ff;">Algorithm: ${esc(algorithm)}</div>
+        <table>
+          <thead>${header}</thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="metrics">
+          <div class="metric">Average WT: ${avg(wt).toFixed(2)} ms</div>
+          <div class="metric">Average TAT: ${avg(tat).toFixed(2)} ms</div>
+        </div>
+        <div class="gantt">
+          <div class="mono" style="color:#bce6ff;">Gantt Timeline</div>
+          <div class="gantt-line">${bars}</div>
+          <div class="timeline">${times}</div>
+        </div>
+      `;
+    }
+
+    function renderMemoryResult({ algorithm, frames, faults, steps }) {
+      const rows = steps.map((s, idx) => {
+        const badgeColor = s.hit ? "var(--good)" : "var(--bad)";
+        return `<tr>
+          <td>${idx + 1}</td>
+          <td>${s.page}</td>
+          <td style="color:${badgeColor}; font-weight:700;">${s.hit ? "HIT" : "MISS"}</td>
+          <td>[ ${s.memory.join(" ")} ]</td>
+        </tr>`;
+      }).join("");
+
+      return `
+        <div class="mono" style="margin-bottom:10px; color:#cbe5ff;">Algorithm: ${esc(algorithm)} | Frames: ${frames}</div>
+        <table>
+          <thead>
+            <tr><th>Step</th><th>Page</th><th>Result</th><th>Memory</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="metrics">
+          <div class="metric">Total Page Faults: ${faults}</div>
+        </div>
+      `;
+    }
+
+    function renderDeadlockResult(result) {
+      const statusClass = result.safe ? "safe" : "deadlock";
+      const statusText = result.safe ? "SAFE" : "DEADLOCK";
+
+      const needRows = result.need
+        .map((row, idx) => `<tr><td>P${idx + 1}</td><td>${row.join(" ")}</td></tr>`)
+        .join("");
+
+      return `
+        <div class="status ${statusClass}">System Status: ${statusText}</div>
+        <div class="mono" style="margin:10px 0; color:#d8ecff;">
+          ${result.safe ? "Safe Sequence: " + result.sequence.join(" -> ") : "No complete safe sequence found."}
+        </div>
+        <table>
+          <thead><tr><th>Process</th><th>Need Vector</th></tr></thead>
+          <tbody>${needRows}</tbody>
+        </table>
+        <div class="metrics">
+          <div class="metric">Available At End: ${result.available_end.join(" ")}</div>
+        </div>
+      `;
+    }
+
+    const cpuAlgorithm = document.getElementById("cpuAlgorithm");
+    const cpuPR = document.getElementById("cpuPR");
+    const cpuQ = document.getElementById("cpuQ");
+
+    function syncCpuOptionalFields() {
+      const algo = cpuAlgorithm.value;
+      const priorityMode = algo === "Priority NP" || algo === "Priority P";
+      cpuPR.disabled = !priorityMode;
+      if (!priorityMode) cpuPR.value = "";
+
+      const rrMode = algo === "Round Robin";
+      cpuQ.disabled = !rrMode;
+      if (!rrMode) cpuQ.value = "";
+    }
+
+    cpuAlgorithm.addEventListener("change", syncCpuOptionalFields);
+    syncCpuOptionalFields();
+
+    document.getElementById("runCPU").addEventListener("click", () => {
+      clearError("cpuError");
+      const out = document.getElementById("cpuResult");
+      try {
+        const n = Number(document.getElementById("cpuN").value);
+        if (!Number.isInteger(n) || n <= 0) throw new Error("Processes (n) must be a positive integer.");
+
+        const at = parseIntList(document.getElementById("cpuAT").value, "Arrival Times", n);
+        const bt = parseIntList(document.getElementById("cpuBT").value, "Burst Times", n);
+        const algorithm = cpuAlgorithm.value;
+
+        let pr = null;
+        let q = null;
+        let res;
+
+        if (algorithm === "Priority NP" || algorithm === "Priority P") {
+          pr = parseIntList(document.getElementById("cpuPR").value, "Priority", n);
+        }
+
+        if (algorithm === "Round Robin") {
+          q = Number(cpuQ.value);
+          if (!Number.isInteger(q) || q <= 0) throw new Error("Time Quantum must be a positive integer.");
+        }
+
+        if (algorithm === "FCFS") res = Scheduler.fcfs(n, at, bt);
+        else if (algorithm === "SJF") res = Scheduler.sjf(n, at, bt);
+        else if (algorithm === "SRTF") res = Scheduler.srtf(n, at, bt);
+        else if (algorithm === "Priority NP") res = Scheduler.priorityNP(n, at, bt, pr);
+        else if (algorithm === "Priority P") res = Scheduler.priorityP(n, at, bt, pr);
+        else res = Scheduler.roundRobin(n, at, bt, q);
+
+        out.innerHTML = renderCpuResult({ n, at, bt, pr, algorithm, ...res });
+      } catch (err) {
+        out.innerHTML = "";
+        showError("cpuError", err.message);
+      }
+    });
+
+    document.getElementById("runMemory").addEventListener("click", () => {
+      clearError("memoryError");
+      const out = document.getElementById("memoryResult");
+      try {
+        const algorithm = document.getElementById("memAlgorithm").value;
+        const pages = parseIntList(document.getElementById("memPages").value, "Pages");
+        const frames = Number(document.getElementById("memFrames").value);
+        if (!Number.isInteger(frames) || frames <= 0) throw new Error("Frames must be a positive integer.");
+
+        const res = algorithm === "FIFO" ? MemoryManager.fifo(pages, frames) : MemoryManager.lru(pages, frames);
+        out.innerHTML = renderMemoryResult({ algorithm, frames, ...res });
+      } catch (err) {
+        out.innerHTML = "";
+        showError("memoryError", err.message);
+      }
+    });
+
+    document.getElementById("runDeadlock").addEventListener("click", () => {
+      clearError("deadlockError");
+      const out = document.getElementById("deadlockResult");
+      try {
+        const n = Number(document.getElementById("deadN").value);
+        const m = Number(document.getElementById("deadM").value);
+        if (!Number.isInteger(n) || n <= 0) throw new Error("Processes (n) must be a positive integer.");
+        if (!Number.isInteger(m) || m <= 0) throw new Error("Resources (m) must be a positive integer.");
+
+        const alloc = parseMatrix(document.getElementById("deadAlloc").value, n, m, "Allocation Matrix");
+        const maxm = parseMatrix(document.getElementById("deadMax").value, n, m, "Max Matrix");
+        const avail = parseIntList(document.getElementById("deadAvail").value, "Available Vector", m);
+
+        const result = bankers(n, m, alloc, maxm, avail);
+        out.innerHTML = renderDeadlockResult(result);
+      } catch (err) {
+        out.innerHTML = "";
+        showError("deadlockError", err.message);
+      }
+    });
+
+    document.getElementById("sampleCPU").addEventListener("click", () => {
+      document.getElementById("cpuAlgorithm").value = "Round Robin";
+      document.getElementById("cpuN").value = "4";
+      document.getElementById("cpuAT").value = "0 1 2 3";
+      document.getElementById("cpuBT").value = "5 3 8 6";
+      document.getElementById("cpuPR").value = "2 1 3 4";
+      document.getElementById("cpuQ").value = "2";
+      syncCpuOptionalFields();
+      document.getElementById("cpuResult").innerHTML = "";
+      clearError("cpuError");
+    });
+
+    document.getElementById("sampleMemory").addEventListener("click", () => {
+      document.getElementById("memAlgorithm").value = "FIFO";
+      document.getElementById("memFrames").value = "3";
+      document.getElementById("memPages").value = "7 0 1 2 0 3 0 4 2 3 0 3 2";
+      document.getElementById("memoryResult").innerHTML = "";
+      clearError("memoryError");
+    });
+
+    document.getElementById("sampleDeadlock").addEventListener("click", () => {
+      document.getElementById("deadN").value = "5";
+      document.getElementById("deadM").value = "3";
+      document.getElementById("deadAvail").value = "3 3 2";
+      document.getElementById("deadAlloc").value = "0 1 0\n2 0 0\n3 0 2\n2 1 1\n0 0 2";
+      document.getElementById("deadMax").value = "7 5 3\n3 2 2\n9 0 2\n2 2 2\n4 3 3";
+      document.getElementById("deadlockResult").innerHTML = "";
+      clearError("deadlockError");
+    });
+  </script>
+</body>
+</html>
